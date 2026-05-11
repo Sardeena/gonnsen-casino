@@ -1,0 +1,57 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Registered casino user profile",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "balance": { "type": "number" },
+        "currency": { "type": "string", "enum": ["USD", "NEON"] },
+        "isAdmin": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "balance"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Financial records (deposits, withdrawals, game outcomes)",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "amount": { "type": "number" },
+        "type": { "type": "string", "enum": ["DEPOSIT", "WITHDRAWAL", "GAME_WIN", "GAME_LOSS"] },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "gameId": { "type": "string" }
+      },
+      "required": ["userId", "amount", "type", "timestamp"]
+    },
+    "GameStat": {
+      "title": "Game Statistics",
+      "description": "Real-time stats for leaderboard and analytics",
+      "type": "object",
+      "properties": {
+        "gameId": { "type": "string" },
+        "totalPlays": { "type": "number" },
+        "biggestWin": { "type": "number" },
+        "popularTags": { "type": "array" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles and balances"
+    },
+    "/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "Financial history"
+    },
+    "/game_stats/{gameId}": {
+      "schema": "GameStat",
+      "description": "Aggregated game analytics"
+    }
+  }
+}
