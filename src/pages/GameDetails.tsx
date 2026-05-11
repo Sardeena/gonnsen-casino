@@ -1,19 +1,28 @@
 import React from "react";
 import { useParams, Link } from "react-router-dom";
 import { motion } from "motion/react";
-import { Play, ShieldCheck, Trophy, Info, ChevronLeft, Star, Heart, Share2, Coins } from "lucide-react";
+import { 
+    Play, ShieldCheck, Trophy, Info, ChevronLeft, Star, Heart, 
+    Share2, Coins, Activity, Zap, TrendingUp, Target, Users 
+} from "lucide-react";
 import confetti from "canvas-confetti";
-
-const GAMES_DB = {
-    "g1": { title: "Cyber Reels", rtp: "98.2%", maxWin: "50,000x", volatility: "High", provider: "NeonGaming" },
-    "g2": { title: "Neon Roulette", rtp: "97.3%", maxWin: "36x", volatility: "Medium", provider: "StaticCore" },
-    "g3": { title: "Blackjack Zero", rtp: "99.5%", maxWin: "3:2", volatility: "Low", provider: "NeonGaming" },
-    "g4": { title: "Matrix Jackpot", rtp: "94.0%", maxWin: "1,000,000x", volatility: "Extreme", provider: "OmegaSlots" },
-};
+import { ALL_GAMES, ExtendedGame } from "../constants/games";
 
 export default function GameDetails() {
   const { id } = useParams();
-  const game = GAMES_DB[id as keyof typeof GAMES_DB] || { title: "Unknown Game", rtp: "0%", maxWin: "0", volatility: "N/A", provider: "N/A" };
+  const game = ALL_GAMES.find(g => g.id === id) as ExtendedGame;
+
+  if (!game) {
+      return (
+          <div className="min-h-screen flex items-center justify-center bg-black text-white p-6">
+              <div className="text-center space-y-6">
+                  <div className="text-gray-700 italic font-black uppercase text-4xl mb-4">PROTOCOL_ERROR</div>
+                  <h1 className="text-2xl font-black uppercase tracking-widest">Target segment not found in matrix</h1>
+                  <Link to="/games" className="casino-button-primary inline-flex scale-75">Return to Hub</Link>
+              </div>
+          </div>
+      );
+  }
 
   const handleDemo = () => {
     confetti({
@@ -36,7 +45,7 @@ export default function GameDetails() {
           <div className="lg:col-span-8">
              <div className="relative aspect-video glass-panel border border-white/5 mb-12 group overflow-hidden shadow-2xl">
                 <img 
-                    src={`https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&q=80&w=1920`} 
+                    src={game.image} 
                     className="w-full h-full object-cover grayscale opacity-40 transition-all duration-1000 group-hover:scale-105 group-hover:grayscale-0 group-hover:opacity-100" 
                     alt={game.title}
                     referrerPolicy="no-referrer"
@@ -66,26 +75,62 @@ export default function GameDetails() {
                  <h1 className="text-5xl md:text-7xl font-display font-black italic text-white uppercase tracking-tighter">{game.title}</h1>
                  <div className="flex items-center gap-2 text-gold font-mono text-sm font-bold bg-white/5 px-4 py-2 border border-gold/20">
                     <Star size={14} fill="currentColor" />
-                    <span>4.9</span>
+                    <span>{game.rating}</span>
                  </div>
                </div>
                <p className="text-gray-500 leading-relaxed text-base uppercase tracking-wider font-medium mb-12">
-                 Experience the peak of digital craftsmanship with {game.title}. Developed by {game.provider}, this experience combines high-frequency mechanics with a sprawling neon aesthetic that pushes the boundaries of modern entertainment.
+                 {game.description}
                </p>
 
                <div className="grid grid-cols-2 sm:grid-cols-4 gap-8">
                  {[
-                   { label: "RTP", value: game.rtp },
-                   { label: "Max Bonus", value: game.maxWin },
-                   { label: "Latency", value: game.volatility },
-                   { label: "Provider", value: game.provider },
+                   { label: "RTP Protocol", value: game.rtp, icon: Activity },
+                   { label: "Max Output", value: game.maxWin, icon: Zap },
+                   { label: "Variance", value: game.volatility, icon: TrendingUp },
+                   { label: "Mainframe", value: game.provider, icon: Target },
                  ].map((stat, i) => (
-                   <div key={i} className="p-6 bg-zinc-900 border border-white/5 italic">
-                     <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-2 font-display">{stat.label}</p>
+                   <div key={i} className="p-6 bg-zinc-900 border border-white/5 italic group hover:border-neon-green transition-all">
+                     <div className="flex items-center gap-2 mb-4">
+                        <stat.icon size={12} className="text-zinc-600 group-hover:text-neon-green transition-colors" />
+                        <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest font-display">{stat.label}</p>
+                     </div>
                      <p className="text-white font-display font-black text-xl italic uppercase tracking-tight">{stat.value}</p>
                    </div>
                  ))}
                </div>
+             </div>
+
+             <div className="space-y-12 mb-16">
+                <h3 className="text-3xl font-display font-black italic text-white uppercase tracking-tighter">Live Neural Stats</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                   <div className="p-8 bg-zinc-900 border border-white/5 space-y-4">
+                      <div className="flex items-center gap-3">
+                         <Users className="text-neon-green" size={20} />
+                         <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Active Sessions</span>
+                      </div>
+                      <div className="text-3xl font-display font-black italic text-white">
+                         {(game.stats?.totalPlays! / 400).toFixed(0)} <span className="text-xs text-gray-700">OPERATIVES</span>
+                      </div>
+                   </div>
+                   <div className="p-8 bg-zinc-900 border border-white/5 space-y-4">
+                      <div className="flex items-center gap-3">
+                         <Trophy className="text-gold" size={20} />
+                         <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Largest Payout</span>
+                      </div>
+                      <div className="text-3xl font-display font-black italic text-neon-green">
+                         {game.stats?.biggestWin}
+                      </div>
+                   </div>
+                   <div className="p-8 bg-zinc-900 border border-white/5 space-y-4">
+                      <div className="flex items-center gap-3">
+                         <TrendingUp className="text-blue-400" size={20} />
+                         <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Efficiency Rate</span>
+                      </div>
+                      <div className="text-3xl font-display font-black italic text-blue-400">
+                         {game.stats?.hotRate}% <span className="text-xs text-gray-700">OPTIMAL</span>
+                      </div>
+                   </div>
+                </div>
              </div>
 
              <div className="space-y-12">

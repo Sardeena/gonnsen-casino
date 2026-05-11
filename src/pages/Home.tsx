@@ -6,42 +6,9 @@ import { Link } from "react-router-dom";
 import { motion } from "motion/react";
 import { cn } from "@/src/lib/utils";
 
-const FEATURED_GAMES: Game[] = [
-  { 
-    id: "g1", title: "Cyber Reels", category: "Slots", 
-    image: "https://images.unsplash.com/photo-1593305841991-05c297ba4575?auto=format&fit=crop&q=80&w=800", rating: 4.9, 
-    previewVideo: "https://assets.mixkit.co/videos/preview/mixkit-abstract-cyber-connection-loop-23429-large.mp4",
-    isPopular: true 
-  },
-  { 
-    id: "g2", title: "Neon Roulette", category: "Table", 
-    image: "https://images.unsplash.com/photo-1596838132731-dd9fd73ef441?auto=format&fit=crop&q=80&w=800", rating: 4.8, 
-    previewVideo: "https://assets.mixkit.co/videos/preview/mixkit-bright-neon-lights-pulsing-in-pink-and-blue-40015-large.mp4",
-    isNew: true 
-  },
-  { 
-    id: "g3", title: "Blackjack Zero", category: "Cards", 
-    image: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80&w=800", rating: 4.7,
-    previewVideo: "https://assets.mixkit.co/videos/preview/mixkit-futuristic-binary-code-screens-23439-large.mp4"
-  },
-  { 
-    id: "g4", title: "Matrix Jackpot", category: "Progressive", 
-    image: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&q=80&w=800", rating: 5.0, 
-    previewVideo: "https://assets.mixkit.co/videos/preview/mixkit-digital-circuit-board-animation-loop-23420-large.mp4",
-    isPopular: true 
-  },
-  { 
-    id: "g5", title: "Dragon Spins", category: "Slots", 
-    image: "https://images.unsplash.com/photo-1614741484745-4200424564ad?auto=format&fit=crop&q=80&w=800", rating: 4.6, 
-    previewVideo: "https://assets.mixkit.co/videos/preview/mixkit-energetic-bright-neon-tunnel-movement-40011-large.mp4",
-    isNew: true 
-  },
-  { 
-    id: "g6", title: "Virtual Poker", category: "Cards", 
-    image: "https://images.unsplash.com/photo-1543282834-6019316cd465?auto=format&fit=crop&q=80&w=800", rating: 4.5,
-    previewVideo: "https://assets.mixkit.co/videos/preview/mixkit-abstract-shimmering-geometric-structure-23428-large.mp4"
-  },
-];
+import { ALL_GAMES } from "../constants/games";
+
+const FEATURED_GAMES = ALL_GAMES.filter(g => g.isPopular || g.isNew).slice(0, 6);
 
 export default function Home() {
   return (

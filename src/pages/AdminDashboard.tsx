@@ -15,13 +15,47 @@ import {
   MoreVertical,
   ShieldAlert,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  Clock,
+  Terminal
 } from "lucide-react";
 import { cn } from "@/src/lib/utils";
 import { useAuth } from "../lib/auth";
 import { Navigate } from "react-router-dom";
-import { collection, onSnapshot, query, updateDoc, doc, limit, orderBy } from "firebase/firestore";
+import { collection, onSnapshot, query, updateDoc, doc, limit, orderBy, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../lib/firebase";
+import { 
+  AreaChart, 
+  Area, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  Cell
+} from 'recharts';
+
+const REVENUE_DATA = [
+  { name: '00:00', value: 4000 },
+  { name: '04:00', value: 3000 },
+  { name: '08:00', value: 2000 },
+  { name: '12:00', value: 2780 },
+  { name: '16:00', value: 1890 },
+  { name: '20:00', value: 2390 },
+  { name: '23:59', value: 3490 },
+];
+
+const USER_ACTIVITY_DATA = [
+  { name: 'Mon', count: 400 },
+  { name: 'Tue', count: 300 },
+  { name: 'Wed', count: 200 },
+  { name: 'Thu', count: 500 },
+  { name: 'Fri', count: 800 },
+  { name: 'Sat', count: 1200 },
+  { name: 'Sun', count: 900 },
+];
 
 // Stats with real counters where possible
 const INITIAL_STATS = [
@@ -37,6 +71,7 @@ export default function AdminDashboard() {
   const [usersBoard, setUsersBoard] = useState<any[]>([]);
   const [stats, setStats] = useState(INITIAL_STATS);
   const [loading, setLoading] = useState(true);
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
 
   useEffect(() => {
     if (!profile?.isAdmin) return;
@@ -50,13 +85,39 @@ export default function AdminDashboard() {
       // Update Stats
       setStats(prev => prev.map(s => {
         if (s.label === "Active Users") return { ...s, value: snap.size.toString(), change: "LIVE" };
+        if (s.label === "Total Revenue") return { ...s, value: "$142,850", change: "+4.2%" };
+        if (s.label === "Total Bets") return { ...s, value: "852k", change: "+12.8%" };
         return s;
       }));
       setLoading(false);
     });
 
-    return () => unsubUsers();
+    // Real-time Audit Logs
+    const logsQuery = query(collection(db, "audit_logs"), orderBy("timestamp", "desc"), limit(50));
+    const unsubLogs = onSnapshot(logsQuery, (snap) => {
+      setAuditLogs(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+
+    return () => {
+      unsubUsers();
+      unsubLogs();
+    };
   }, [profile]);
+
+  const logAdminAction = async (action: string, targetId: string, details: string) => {
+    try {
+      await addDoc(collection(db, "audit_logs"), {
+        adminId: user?.uid,
+        adminName: profile?.displayName || user?.email,
+        action,
+        targetId,
+        details,
+        timestamp: serverTimestamp()
+      });
+    } catch (err) {
+      console.error("Failed to log admin action:", err);
+    }
+  };
 
   const handleUpdateBalance = async (userId: string, currentBalance: number, amount: number) => {
     try {
@@ -64,6 +125,7 @@ export default function AdminDashboard() {
       await updateDoc(userRef, {
         balance: currentBalance + amount
       });
+      await logAdminAction("BALANCE_UPDATE", userId, `Adjusted balance by ${amount}. New: ${currentBalance + amount}`);
     } catch (err) {
       console.error("Failed to update balance:", err);
     }
@@ -75,6 +137,7 @@ export default function AdminDashboard() {
       await updateDoc(userRef, {
         isAdmin: !currentStatus
       });
+      await logAdminAction("ADMIN_TOGGLE", userId, `Changed admin status to ${!currentStatus}`);
     } catch (err) {
       console.error("Failed to toggle admin status:", err);
     }
@@ -177,6 +240,101 @@ export default function AdminDashboard() {
                 ))}
               </div>
 
+              {/* Data Visualization Charts */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="p-8 bg-zinc-900 border border-white/5 space-y-6">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-black uppercase italic tracking-widest">Revenue Matrix</h3>
+                    <div className="flex gap-2">
+                       <div className="w-3 h-3 bg-neon-green" />
+                       <span className="text-[10px] font-mono text-gray-500 uppercase">Live Intake</span>
+                    </div>
+                  </div>
+                  <div className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={REVENUE_DATA}>
+                        <defs>
+                          <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#39FF14" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="#39FF14" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
+                        <XAxis 
+                          dataKey="name" 
+                          stroke="#4b5563" 
+                          fontSize={10} 
+                          tickLine={false} 
+                          axisLine={false}
+                        />
+                        <YAxis 
+                          stroke="#4b5563" 
+                          fontSize={10} 
+                          tickLine={false} 
+                          axisLine={false}
+                          tickFormatter={(value) => `$${value}`}
+                        />
+                        <Tooltip 
+                          contentStyle={{ backgroundColor: '#18181b', border: '1px solid #ffffff10', fontSize: '10px' }}
+                          itemStyle={{ color: '#39FF14' }}
+                        />
+                        <Area 
+                          type="monotone" 
+                          dataKey="value" 
+                          stroke="#39FF14" 
+                          fillOpacity={1} 
+                          fill="url(#colorValue)" 
+                          strokeWidth={2}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                <div className="p-8 bg-zinc-900 border border-white/5 space-y-6">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-black uppercase italic tracking-widest">User Protocols</h3>
+                    <div className="flex gap-2">
+                       <span className="text-[10px] font-mono text-gray-500 uppercase">Weekly Engagement</span>
+                    </div>
+                  </div>
+                  <div className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={USER_ACTIVITY_DATA}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
+                        <XAxis 
+                          dataKey="name" 
+                          stroke="#4b5563" 
+                          fontSize={10} 
+                          tickLine={false} 
+                          axisLine={false}
+                        />
+                        <YAxis 
+                          stroke="#4b5563" 
+                          fontSize={10} 
+                          tickLine={false} 
+                          axisLine={false}
+                        />
+                        <Tooltip 
+                          cursor={{fill: '#ffffff05'}}
+                          contentStyle={{ backgroundColor: '#18181b', border: '1px solid #ffffff10', fontSize: '10px' }}
+                          itemStyle={{ color: '#39FF14' }}
+                        />
+                        <Bar dataKey="count" fill="#39FF14" radius={[4, 4, 0, 0]}>
+                           {USER_ACTIVITY_DATA.map((entry, index) => (
+                              <Cell 
+                                key={`cell-${index}`} 
+                                cursor="pointer" 
+                                fill={index === 5 ? '#39FF14' : '#39FF1460'} 
+                              />
+                           ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </div>
+
               {/* User management in overview for quick access */}
               <div className="space-y-6">
                   <div className="flex items-center justify-between">
@@ -249,7 +407,50 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {activeTab !== "overview" && (
+          {activeTab === "logs" && (
+            <div className="space-y-10">
+               <div>
+                  <h1 className="text-4xl md:text-6xl font-display font-black italic uppercase tracking-tighter mb-2">
+                    Audit <span className="text-neon-green neon-glow-green">Logs</span>
+                  </h1>
+                  <p className="text-gray-500 text-xs font-bold uppercase tracking-[0.3em]">Protocol Action Serialization</p>
+                </div>
+
+                <div className="space-y-4">
+                  {auditLogs.length === 0 ? (
+                    <div className="p-12 border border-dashed border-white/10 rounded-xl text-center">
+                       <Terminal className="mx-auto text-gray-700 mb-4" size={48} />
+                       <p className="text-gray-600 font-mono text-xs uppercase tracking-widest">No active protocols detected in buffer</p>
+                    </div>
+                  ) : (
+                    auditLogs.map((log) => (
+                      <div key={log.id} className="p-6 bg-zinc-900 border border-white/5 flex items-start gap-6 hover:border-neon-green/30 transition-all">
+                        <div className="p-3 bg-black border border-white/5 text-neon-green">
+                           <Clock size={16} />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-2">
+                             <div className="flex items-center gap-3">
+                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neon-green">{log.action}</span>
+                                <span className="text-gray-700">•</span>
+                                <span className="text-[10px] font-mono text-gray-500">{new Date(log.timestamp?.toDate()).toLocaleString()}</span>
+                             </div>
+                             <span className="text-[9px] font-mono text-gray-600">ID: {log.id.slice(0, 8)}</span>
+                          </div>
+                          <p className="text-sm font-bold text-white mb-2">{log.details}</p>
+                          <div className="flex items-center gap-4 text-[10px] font-mono">
+                             <span className="text-gray-500 uppercase tracking-widest">Operator: <span className="text-white">{log.adminName}</span></span>
+                             <span className="text-gray-500 uppercase tracking-widest">Target: <span className="text-blue-400">{log.targetId}</span></span>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+            </div>
+          )}
+
+          {activeTab !== "overview" && activeTab !== "logs" && (
             <div className="flex flex-col items-center justify-center h-full opacity-30 italic">
                <Activity size={80} className="text-neon-green mb-6 animate-pulse" />
                <h3 className="text-4xl font-black uppercase">Segment <span className="text-neon-green">Encrypted</span></h3>
